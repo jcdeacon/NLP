@@ -96,7 +96,6 @@ def execute_svm(reviews, f_is_test_instance):
     test_set = filter(f_is_test_instance, reviews)
     train_set = filter(lambda x: not f_is_test_instance(x), reviews)
 
-    # TODO: implement SVM
     classifier = SVM()
     for r in train_set:
         classifier.feed(r.bag_of_words, r.polarity)
@@ -124,7 +123,7 @@ def interpret_results(results):
     return interpretation
 
 '''
-End Naive Bayes things
+End Classification things
 '''
 
 '''
@@ -238,11 +237,11 @@ def main():
 
     svm = holdout_svm(tagged_reviews)
     for r in svm:
-        classifications[r.file_name] = {'svm': svm[r]}
+        classifications[r.file_name]['svm'] = svm[r]
 
     perform_sign_test(ground_polarities.keys(), 'svm', '1-smoothing',
         classifications, ground_polarities)
-
+    '''
     print('----')
     print('Cross-validated naive Bayes classification')
     print('----')
@@ -255,6 +254,6 @@ def main():
     print('Cross-validated SVM classification')
     print('----')
     cross_val_svm(tagged_reviews, cv_method)
-
+    '''
 if __name__ == '__main__':
     main()

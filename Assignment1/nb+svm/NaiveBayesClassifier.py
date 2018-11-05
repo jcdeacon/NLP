@@ -26,7 +26,7 @@ class NaiveBayesClassifier:
         self.total_count += 1
 
     def train(self):
-        self.class_priors = {clazz: count / self.total_count for (clazz, count) in self.class_counts.items()}
+        self.class_priors = {clazz: float(count) / self.total_count for (clazz, count) in self.class_counts.items()}
         print('Training Naive Bayes with class counts:', self.class_counts, 'yielding priors', self.class_priors)
 
         # Sum of counts of all words, per class
