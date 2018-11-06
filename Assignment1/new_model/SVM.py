@@ -1,7 +1,7 @@
 import svmlight
 
 from Polarity import Polarity
-import random
+import sets
 
 class SVM:
     def __init__(self):
@@ -12,7 +12,12 @@ class SVM:
 
     def feed(self, words, clazz):
         features = []
+        word_set = sets.Set()
         for word in words:
+            if word in word_set:
+                continue
+            else:
+                word_set.add(word)
             if word in self.bank:
                 features.append((self.bank[word], 1))
             else:
@@ -32,11 +37,15 @@ class SVM:
 
     def classify(self, bag_of_words):
         test_example = []
+        word_set = sets.Set()
         for word in bag_of_words:
+            if word in word_set:
+                continue
+            else:
+                word_set.add(word)
             if word in self.bank:
                 test_example.append((self.bank[word], 1))
         prediction = svmlight.classify(self.model, [(0, test_example)])
-        print(prediction)
         if prediction[0] > 0:
             return Polarity.POS
         else:

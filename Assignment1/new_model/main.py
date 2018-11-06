@@ -9,8 +9,8 @@ from math import factorial, ceil
 from functools import partial
 from decimal import Decimal
 
-POSITIVE_TAGGED_DIR = 'data/POS'
-NEGATIVE_TAGGED_DIR = 'data/NEG'
+POSITIVE_TAGGED_DIR = 'stemmed_data/POS'
+NEGATIVE_TAGGED_DIR = 'stemmed_data/NEG'
 
 '''
 Sign test things
@@ -241,7 +241,7 @@ def main():
 
     perform_sign_test(ground_polarities.keys(), 'svm', '1-smoothing',
         classifications, ground_polarities)
-    '''
+
     print('----')
     print('Cross-validated naive Bayes classification')
     print('----')
@@ -254,6 +254,6 @@ def main():
     print('Cross-validated SVM classification')
     print('----')
     cross_val_svm(tagged_reviews, cv_method)
-    '''
+
 if __name__ == '__main__':
     main()

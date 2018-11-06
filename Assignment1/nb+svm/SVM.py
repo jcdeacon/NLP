@@ -20,6 +20,9 @@ class SVM:
 
     def train(self):
         print('Training SVM')
+        for item in self.data:
+            print(item)
+            print("\n\n\n\n")
         self.learner.fit(self.data, self.classifications)
 
     def classify(self, bag_of_words):
