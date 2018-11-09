@@ -1,21 +1,30 @@
-from distutils.core import setup
-from distutils.extension import Extension
-from Cython.Distutils import build_ext
-from disttest import test
+#!/usr/bin/python
 
-ext_modules = [
-    Extension("svmlight",
-              ["src/svmlight.pyx",
-               "lib/svm_common.c",
-               "lib/svm_learn.c",
-               "lib/svm_hideo.c"
-               ],
-              include_dirs = ["lib"])]
+from distutils.core import setup, Extension
+from glob import glob
 
-setup(
-  name = 'Hello world app',
-  cmdclass = {'build_ext': build_ext,
-              'test' : test},
-  ext_modules = ext_modules,
-  options = {'test' : {'test_dir':['test']}}
-)
+lib_sources = glob('lib/*.c')
+lib_sources.remove('lib/svm_loqo.c') # this is an alternate backend for SVM-Light; only
+                                     # one of {svm_loqo.c,svm_hideo.c} may be compiled
+                                     # with this extension.
+lib_sources.remove('lib/svm_classify.c') # this file implements the "classify" binary;
+                                         # don't include it, since it defines main()
+                                         # again!
+
+setup(name         = 'svmlight',
+      version      = '0.4',
+      description  = 'Interface to Thorsten Joachims\' SVM-Light',
+      author       = "William Cauchois",
+      author_email = "wcauchois@gmail.com",
+      url          = "http://bitbucket.org/wcauchois/pysvmlight",
+      long_description = open('README.md').read(),
+      classifiers  = [
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Science/Research',
+        'Programming Language :: Python',
+        'Topic :: Scientific/Engineering :: Artificial Intelligence'
+      ],
+      ext_modules = [
+        Extension('svmlight', include_dirs = ['lib/'],
+                  sources = ['svmlight/svmlight.c'] + lib_sources)
+      ])

@@ -48,7 +48,7 @@ class NaiveBayesClassifier:
                 if word_count is 0:
                     continue
 
-                probs[clazz] += log(word_count / class_count)
+                probs[clazz] += log(float(word_count) / class_count)
 
         # Check that the probabilities aren't the same for each class
         # If they are, return a random class

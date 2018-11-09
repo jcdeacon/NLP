@@ -9,8 +9,8 @@ from math import factorial, ceil
 from functools import partial
 from decimal import Decimal
 
-POSITIVE_TAGGED_DIR = 'data/POS'
-NEGATIVE_TAGGED_DIR = 'data/NEG'
+POSITIVE_TAGGED_DIR = 'stemmed_data/POS'
+NEGATIVE_TAGGED_DIR = 'stemmed_data/NEG'
 
 '''
 Sign test things
@@ -53,7 +53,7 @@ def perform_sign_test(reviews, system1, system2, classifications, polarities):
     n = 2 * ceil(sign_values['null'] / 2.) + sign_values['plus'] + sign_values['minus']
     k = ceil(sign_values['null'] / 2.) + min(sign_values['plus'], sign_values['minus'])
 
-    z = two_tail_cumulative_binomial(n, k, 0.5)
+    z = two_tail_cumulative_binomial(int(n), int(k), 0.5)
     p = 0.01
     if z < p:
         print(z, '<', p, '=> Statistically significant')
@@ -81,27 +81,39 @@ End parsing
 '''
 Classifier related stuff
 '''
-def execute_naive_bayes(reviews, f_is_test_instance, smoothing):
+def execute_naive_bayes(reviews, f_is_test_instance, smoothing, bigrams):
     test_set = filter(f_is_test_instance, reviews)
     train_set = filter(lambda x: not f_is_test_instance(x), reviews)
 
     classifier = NaiveBayesClassifier()
     for r in train_set:
-        classifier.feed(r.bag_of_words, r.polarity)
+        if bigrams:
+            classifier.feed(r.all_features, r.polarity)
+        else:
+            classifier.feed(r.bag_of_words, r.polarity)
 
     classifier.train()
-    return {r: classifier.classify(r.bag_of_words, smoothing) for r in test_set}
+    if bigrams:
+        return {r: classifier.classify(r.all_features, smoothing) for r in test_set}
+    else:
+        return {r: classifier.classify(r.bag_of_words, smoothing) for r in test_set}
 
-def execute_svm(reviews, f_is_test_instance):
+def execute_svm(reviews, f_is_test_instance, bigrams):
     test_set = filter(f_is_test_instance, reviews)
     train_set = filter(lambda x: not f_is_test_instance(x), reviews)
 
     classifier = SVM()
     for r in train_set:
-        classifier.feed(r.bag_of_words, r.polarity)
+        if bigrams:
+            classifier.feed(r.all_features, r.polarity)
+        else:
+            classifier.feed(r.bag_of_words, r.polarity)
 
     classifier.train()
-    return {r: classifier.classify(r.bag_of_words) for r in test_set}
+    if bigrams:
+        return {r: classifier.classify(r.all_features) for r in test_set}
+    else:
+        return {r: classifier.classify(r.bag_of_words) for r in test_set}
 
 def interpret_results(results):
     correct = 0
@@ -149,28 +161,30 @@ End cross validation utility functions.
 Begin different types of classifier
 '''
 
-def holdout_naive_bayes(tagged_reviews, smoothing=1):
+def holdout_naive_bayes(tagged_reviews, bigrams=False, smoothing=1):
     is_test_function = lambda x: x.file_id >= 900
-    nb_results = execute_naive_bayes(tagged_reviews, is_test_function, smoothing)
+    nb_results = execute_naive_bayes(tagged_reviews, is_test_function, smoothing, bigrams)
 
     interpreted_results = interpret_results(nb_results)
     print('Correct:', interpreted_results['correct'], 'Wrong:', interpreted_results['wrong'], ', Unclassifiable:', interpreted_results['unclassifiable'], ', Accuracy:', interpreted_results['accuracy'])
     return nb_results
 
-def holdout_svm(tagged_reviews):
+def holdout_svm(tagged_reviews, bigrams=False):
     is_test_function = lambda x: x.file_id >= 900
-    svm_results = execute_svm(tagged_reviews, is_test_function)
+    svm_results = execute_svm(tagged_reviews, is_test_function, bigrams)
     interpreted_results = interpret_results(svm_results)
     print('Correct:', interpreted_results['correct'], 'Wrong:', interpreted_results['wrong'], ', Unclassifiable:', interpreted_results['unclassifiable'], ', Accuracy:', interpreted_results['accuracy'])
     return svm_results
 
 
-def cross_val_naive_bayes(tagged_reviews, cv_method, smoothing=1):
+def cross_val_naive_bayes(tagged_reviews, cv_method, bigrams = False, smoothing=1):
     cv_nb_results = list()
+    classifications = dict()
     for k in range(10):
         print("\nTraining {}th fold".format(k))
         is_test_function = partial(cv_method, k)
-        raw_results = execute_naive_bayes(tagged_reviews, is_test_function, smoothing)
+        raw_results = execute_naive_bayes(tagged_reviews, is_test_function, smoothing, bigrams)
+        classifications.update(raw_results)
         interpreted_results = interpret_results(raw_results)
         print('Correct:', interpreted_results['correct'], 'Wrong:', interpreted_results['wrong'], ', Accuracy:', interpreted_results['accuracy'])
         cv_nb_results.append(interpreted_results)
@@ -183,13 +197,16 @@ def cross_val_naive_bayes(tagged_reviews, cv_method, smoothing=1):
     cv_variance -= cv_accuracy ** 2
 
     print('Cross validation accuracy:', cv_accuracy, 'variance:', cv_variance)
+    return classifications
 
-def cross_val_svm(tagged_reviews, cv_method):
+def cross_val_svm(tagged_reviews, cv_method, bigrams=False):
     cv_svm_results = list()
+    classifications = dict()
     for k in range(10):
         print("\nTraining {}th fold".format(k))
         is_test_function = partial(cv_method, k)
-        raw_results = execute_svm(tagged_reviews, is_test_function)
+        raw_results = execute_svm(tagged_reviews, is_test_function, bigrams)
+        classifications.update(raw_results)
         interpreted_results = interpret_results(raw_results)
         print('Correct:', interpreted_results['correct'], 'Wrong:', interpreted_results['wrong'], ', Accuracy:', interpreted_results['accuracy'])
         cv_svm_results.append(interpreted_results)
@@ -202,6 +219,7 @@ def cross_val_svm(tagged_reviews, cv_method):
     cv_variance -= cv_accuracy ** 2
 
     print('Cross validation accuracy:', cv_accuracy, 'variance:', cv_variance)
+    return classifications
 
 '''
 End different types of classifier
@@ -210,50 +228,94 @@ End different types of classifier
 
 def main():
     print('----')
-    print('Holdout naive Bayes classification')
+    print('Holdout naive Bayes classification without bigrams')
     print('----')
 
     tagged_reviews = parse_reviews(POSITIVE_TAGGED_DIR, Polarity.POS)
     tagged_reviews.extend(parse_reviews(NEGATIVE_TAGGED_DIR, Polarity.NEG))
 
-    print('With 0-smoothing')
-    nb_0_smooth = holdout_naive_bayes(tagged_reviews, 0)
     print('With 1-smoothing')
-    nb_1_smooth = holdout_naive_bayes(tagged_reviews, 1)
+    nb_1_smooth = holdout_naive_bayes(tagged_reviews, False, 1)
 
-    ground_polarities = {r.file_name: r.polarity for r in nb_0_smooth.keys()}
+    ground_polarities = {r.file_name: r.polarity for r in nb_1_smooth.keys()}
 
     classifications = dict()
-    for r in nb_0_smooth:
-        classifications[r.file_name] = {'0-smoothing': nb_0_smooth[r]}
     for r in nb_1_smooth:
-        classifications[r.file_name]['1-smoothing'] = nb_1_smooth[r]
-
-    perform_sign_test(ground_polarities.keys(), '0-smoothing', '1-smoothing', classifications, ground_polarities)
-
+        classifications[r.file_name] = {'1-smooth-uni': nb_1_smooth[r]}
+    
     print('----')
-    print('Holdout SVM classification')
+    print('Holdout naive Bayes classification with bigrams')
     print('----')
 
-    svm = holdout_svm(tagged_reviews)
+    print('With 1-smoothing')
+    nb_1_smooth = holdout_naive_bayes(tagged_reviews, True, 1)
+
+    for r in nb_1_smooth:
+        classifications[r.file_name]['1-smooth-bi'] = nb_1_smooth[r]
+
+    print('----')
+    print('Holdout SVM classification without bigrams')
+    print('----')
+
+    svm = holdout_svm(tagged_reviews, False)
     for r in svm:
-        classifications[r.file_name]['svm'] = svm[r]
+        classifications[r.file_name]['svm-uni'] = svm[r]
 
-    perform_sign_test(ground_polarities.keys(), 'svm', '1-smoothing',
-        classifications, ground_polarities)
-    '''
     print('----')
-    print('Cross-validated naive Bayes classification')
+    print('Holdout SVM classification with bigrams')
     print('----')
-    # Different possibilities for cross-validation splitting
+
+    svm = holdout_svm(tagged_reviews, True)
+    for r in svm:
+        classifications[r.file_name]['svm-bi'] = svm[r]
+
+    models = ['1-smooth-uni', '1-smooth-bi', 'svm-uni', 'svm-bi']
+
+    for model1 in models:
+        for model2 in models:
+            if model1 != model2:
+                perform_sign_test(ground_polarities.keys(), model1,
+                    model2, classifications, ground_polarities)
+    
+    new_class = dict()
     cv_method = is_test_round_robin
-    # cv_method = is_test_consecutive_splitting
-    cross_val_naive_bayes(tagged_reviews, cv_method, 1)
+    print('----')
+    print('Cross-validated naive Bayes without bigrams classification')
+    print('----')
+    classifications_nb_uni = \
+        cross_val_naive_bayes(tagged_reviews, cv_method, False, 1)
+    for r in classifications_nb_uni:
+        new_class[r.file_name] = {'nb-uni': classifications_nb_uni[r]}
 
     print('----')
-    print('Cross-validated SVM classification')
+    print('Cross-validated naive Bayes with bigrams classification')
+    classifications_nb_bi = \
+        cross_val_naive_bayes(tagged_reviews, cv_method, True, 1)
+    for r in classifications_nb_bi:
+        new_class[r.file_name]['nb-bi'] = classifications_nb_bi[r]
+    
     print('----')
-    cross_val_svm(tagged_reviews, cv_method)
-    '''
+    print('Cross-validated SVM without bigrams classification')
+    print('----')
+    classifications_svm_uni = \
+        cross_val_svm(tagged_reviews, cv_method, False)
+    for r in classifications_svm_uni:
+        new_class[r.file_name]['svm-uni'] = classifications_svm_uni[r]
+    print('----')
+    print('Cross-validated SVM with bigrams classification')
+    print('----')
+    classifications_svm_bi = \
+        cross_val_svm(tagged_reviews, cv_method, True)
+    for r in classifications_svm_bi:
+        new_class[r.file_name]['svm-bi'] = classifications_svm_bi[r]
+    
+    models = ['nb-uni', 'nb-bi', 'svm-uni', 'svm-bi']
+    ground_polarities = {r.file_name: r.polarity for r in classifications_svm_bi.keys()}    
+    for model1 in models:
+        for model2 in models:
+            if model1 != model2:
+                perform_sign_test(ground_polarities.keys(), model1,
+                        model2, new_class, ground_polarities)
+
 if __name__ == '__main__':
     main()

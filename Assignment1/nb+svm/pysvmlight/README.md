@@ -1,70 +1,66 @@
-pysvmlight
+PySVMLight
 ==========
 
-Bismillahi-r-Rahmani-r-Rahim
-In the Name of God, the Merciful, the Compassionate
+A Python binding to the [SVM-Light](http://svmlight.joachims.org/) support vector machine library by Thorsten Joachims.
 
-This is a wrapper for the svmlight library. It allows you to specify
-an unbiased hyperplane. It also allows you to access the learnt
-hyperplane after training.
+Written by Bill Cauchois (<wcauchois@gmail.com>), with thanks to Lucas Beyer and n0mad for their contributions.
 
-See the svmlight website (http://svmlight.joachims.org/) for full
-details. 
+Installation
+------------
+PySVMLight uses distutils for setup. Installation is as simple as
 
-Example of use:
+    $ chmod +x setup.py
+    $ ./setup.py --help
+    $ ./setup.py build
 
-```python
->>> f = DocumentFactory()
->>> docs = [f.new(x.split()) for x in [
-...         "this is a nice long document",
-...         "this is another nice long document",
-...         "this is rather a short document",
-...         "a horrible document",
-...         "another horrible document"]]
->>> l = Learner()
->>> model = l.learn(docs, [1, 1, 1, -1, -1])
->>> judgments = [model.classify(d) for d in docs]
->>> print model.plane, model.bias
-```
+If you want to install SVMLight to your PYTHONPATH, type:
 
-Building from source
-====================
+    $ ./setup.py install
 
-Building requires Cython to be installed. Type
-```
-$ python setup.py build
-$ python setup.py install
-```
-in the root directory to build and install.
+(You may need to execute this command as the superuser.) Otherwise, look in the build/ directory to find svmlight.so and copy that file to the directory of your project. You should now be able to `import svmlight`.
 
+Getting Started
+---------------
+See examples/simple.py for example usage.
 
-License
-=======
+Reference
+---------
 
-The original svmlight code is included in the lib directory for ease
-of building. This code is Copyright (c) 2002 Thorsten Joachims - All
-rights reserved.
+If you type `help(svmlight)`, you will see that there are currently three functions.
 
-The cython code in the src directory is released under the MIT
-license:
+    learn(training_data, **options) -> model
 
-Copyright (c) 2012 Daoud Clarke
+Train a model based on a set of training data. The training data should be in the following format:
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+    >> (<label>, [(<feature>, <value>), ...])
 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
+or
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    >> (<label>, [(<feature>, <value>), ...], <queryid>)
+
+See examples/data.py for an example of some training data. Available options include (corresponding roughly to the command-line options for `svmlight` detailed on [this page](http://svmlight.joachims.org/) under the section titled "How to use"):
+
+ - `type`: select between 'classification', 'regression', 'ranking' (preference ranking), and 'optimization'.
+ - `kernel`: select between 'linear', 'polynomial', 'rbf', and 'sigmoid'.
+ - `verbosity`: set the verbosity level (default 0).
+ - `C`: trade-off between training error and margin.
+ - `poly_degree`: parameter d in polynomial kernel.
+ - `rbf_gamma`: parameter gamma in rbf kernel.
+ - `coef_lin`
+ - `coef_const`
+ - `costratio` (corresponds to `-j` option to `svm_learn`)
+
+The result of this call is a model that you can pass to classify().
+
+    classify(model, test_data, **options) -> predictions
+
+Classify a set of test data using the provided model. The test data should be in the same format as training data (see above). The result will be a list of floats, corresponding to predicted labels for each of the test instances.
+
+    write_model(model, filename) -> None
+
+Write the provided model to the specified file. The file format used is the same format as that used by the command-line `svmlight` program.
+
+    read_model(filename) -> model
+
+Read a model that was saved using write_model().
+
