@@ -3,8 +3,8 @@ from Polarity import Polarity
 from os import listdir
 from sklearn import svm
 
-POSITIVE_TAGGED_DIR = 'data/pos/'
-NEGATIVE_TAGGED_DIR = 'data/neg/'
+POSITIVE_TAGGED_DIR = 'data/small_pos/'
+NEGATIVE_TAGGED_DIR = 'data/small_neg/'
 
 polarities = dict()
 validation = []
@@ -38,10 +38,10 @@ def get_data():
             training.append(negative_reviews[i])
 
 def cross_val(labels, data):
-    print "Starting cross validation"
+    print("Starting cross validation")
     accuracies = []
     for i in range(10):
-        print "Using fold %d" % i
+        print("Using fold %d" % i)
         training = []
         training_labels = []
         testing = []
@@ -57,7 +57,7 @@ def cross_val(labels, data):
         clf.fit(training, training_labels)
         score = clf.score(testing, testing_labels)
         accuracies.append(score)
-    print "Cross validation complete"
+    print("Cross validation complete")
     return sum(accuracies) / len(accuracies)
 
     # for each fold
@@ -88,8 +88,8 @@ def main():
     '''
     accuracies = []
     for par in parameters:
-        print "Testing parameters"
-        print par
+        print("Testing parameters")
+        print(par)
         model = gensim.models.doc2vec.Doc2Vec(dm=par['dm'],
             vector_size=par['dim'], epochs=par['epch'], window=par['wdw'],
             hs=par['hs'])
@@ -102,7 +102,7 @@ def main():
         labels = [polarities[v[1]] for v in validation_vectors]
         data = [v[0] for v in validation_vectors]
         accuracies.append(cross_val(labels, data))
-    print accuracies
+    print(accuracies)
 
 
     # Choose the parameters with the best results on the validation set.
