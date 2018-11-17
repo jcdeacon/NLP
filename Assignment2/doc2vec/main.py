@@ -22,10 +22,10 @@ def get_data():
     negative_reviews = []
     for file_name in listdir(POSITIVE_TAGGED_DIR):
         positive_reviews.append(parse(POSITIVE_TAGGED_DIR, file_name))
-        polarities[file_name] = Polarity.POS
+        polarities[file_name] = 1
     for file_name in listdir(NEGATIVE_TAGGED_DIR):
         negative_reviews.append(parse(NEGATIVE_TAGGED_DIR, file_name))
-        polarities[file_name] = Polarity.NEG
+        polarities[file_name] = -1
     for i in range(len(positive_reviews)):
         if i % 10 == 0:
             validation.append(positive_reviews[i])
@@ -53,10 +53,10 @@ def cross_val(labels, data):
             else:
                 training_labels.append(labels[j])
                 training.append(data[j])
-        print "Split data"
         clf = svm.SVC(gamma="scale")
         clf.fit(training, training_labels)
-        accuracies.append(clf.score(testing, testing_labels))
+        score = clf.score(testing, testing_labels)
+        accuracies.append(score)
     print "Cross validation complete"
     return sum(accuracies) / len(accuracies)
 
@@ -69,15 +69,15 @@ def main():
     # Separate the data into validation and training
     get_data()
     # Prepare a list of parameters
-    parameters = [{'dm' : 1, 'dim' : 100, 'epch' : 20, 'wdw' : 5, 'hs' : 1}]
-    '''    {'dm' : 0, 'dim' : 100, 'epch' : 20, 'wdw' : 5, 'hs' : 1},
+    parameters = [{'dm' : 1, 'dim' : 100, 'epch' : 20, 'wdw' : 5, 'hs' : 1},
+        {'dm' : 0, 'dim' : 100, 'epch' : 20, 'wdw' : 5, 'hs' : 1},
         {'dm' : 1, 'dim' : 100, 'epch' : 20, 'wdw' : 5, 'hs' : 0},
         {'dm' : 0, 'dim' : 100, 'epch' : 20, 'wdw' : 5, 'hs' : 0},
         {'dm' : 1, 'dim' : 100, 'epch' : 20, 'wdw' : 10, 'hs' : 1},
         {'dm' : 0, 'dim' : 100, 'epch' : 20, 'wdw' : 10, 'hs' : 1},
         {'dm' : 1, 'dim' : 100, 'epch' : 20, 'wdw' : 10, 'hs' : 0},
         {'dm' : 0, 'dim' : 100, 'epch' : 20, 'wdw' : 10, 'hs' : 0}]
-    '''# For each set of parameters, train the training set and evaluate
+    # For each set of parameters, train the training set and evaluate
     #   on the validation set.
     '''
     for each parameter set:
@@ -99,7 +99,7 @@ def main():
         validation_vectors = []
         for v in validation:
             validation_vectors.append((model.infer_vector(v[0]), v[1]))
-        labels = [v[1] for v in validation_vectors]
+        labels = [polarities[v[1]] for v in validation_vectors]
         data = [v[0] for v in validation_vectors]
         accuracies.append(cross_val(labels, data))
     print accuracies
